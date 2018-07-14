@@ -7,6 +7,7 @@
 //
 
 import UIKit
+import Firebase
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -15,8 +16,51 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplicationLaunchOptionsKey: Any]?) -> Bool {
-        // Override point for customization after application launch.
+        
+        FirebaseApp.configure()
+        handleUpcomingEvent()
+        
+        let vc = VCLogin()
+        self.window?.rootViewController = vc
+        self.window?.makeKeyAndVisible()
+        
+        
         return true
+    }
+    
+    func handleUpcomingEvent(){
+        
+        var ref = DatabaseReference()
+        ref = Database.database().reference()
+
+        var listOfChatInfo = [Chat]()
+        
+        ref.child("chat").queryOrdered(byChild: "postData").observe(.value, with:
+            { (snapshot) in
+
+                listOfChatInfo.removeAll()
+                if let snapshot = snapshot.children.allObjects as? [DataSnapshot]{
+                    for snap in snapshot{
+                        if let postData = snap.value as? [String:Any]{
+                            let username = postData["name"] as? String
+                            let text = postData["text"] as? String
+                            
+                            var postDate:CLong?
+                            if let postDateIn = postData["postData"] as? CLong{
+                                postDate = postDateIn
+                            }
+                            
+                            listOfChatInfo.append(Chat(userName: username!, description: text!, datePost: "\(postDate)"))
+                            
+                        }
+                    }
+                let val = ["value":listOfChatInfo]
+                NotificationCenter.default.post(name: NSNotification.Name(rawValue: "leave"), object: nil, userInfo: val)
+                    
+                    // print("Snapshot value: \(snapshot)")
+                }
+        })
+        
     }
 
     func applicationWillResignActive(_ application: UIApplication) {
